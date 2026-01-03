@@ -79,6 +79,12 @@ public class ParkingGUI extends JFrame {
     private JLabel zoneALabel;
     private JLabel zoneBLabel;
     private JLabel zoneCLabel;
+    private JProgressBar zoneAProgress;
+    private JProgressBar zoneBProgress;
+    private JProgressBar zoneCProgress;
+    private JLabel zoneAPercent;
+    private JLabel zoneBPercent;
+    private JLabel zoneCPercent;
 
     // Action buttons
     private JButton bookButton;
@@ -278,23 +284,78 @@ public class ParkingGUI extends JFrame {
     }
 
     /**
-     * Create availability display panel
+     * Create availability display panel with progress bars
      */
     private JPanel createAvailabilityPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 30, 5));
-        panel.setBorder(new TitledBorder("Available Spots"));
+        JPanel mainPanel = new JPanel(new GridLayout(1, 3, 20, 10));
+        mainPanel.setBorder(new TitledBorder("Real-Time Parking Availability"));
+        mainPanel.setPreferredSize(new Dimension(800, 120));
 
-        zoneALabel = new JLabel("Zone A: 20/20");
-        zoneALabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        panel.add(zoneALabel);
+        // Zone A Panel - createZonePanel assigns zoneALabel and zoneAProgress
+        mainPanel.add(createZonePanel("Zone A", 20));
 
-        zoneBLabel = new JLabel("Zone B: 15/15");
-        zoneBLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        panel.add(zoneBLabel);
+        // Zone B Panel - createZonePanel assigns zoneBLabel and zoneBProgress
+        mainPanel.add(createZonePanel("Zone B", 15));
 
-        zoneCLabel = new JLabel("Zone C: 10/10");
-        zoneCLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 14));
-        panel.add(zoneCLabel);
+        // Zone C Panel - createZonePanel assigns zoneCLabel and zoneCProgress
+        mainPanel.add(createZonePanel("Zone C", 10));
+
+        return mainPanel;
+    }
+
+    /**
+     * Create individual zone panel with label and progress bar
+     * 
+     * @param zoneName Name of the zone (e.g., "Zone A")
+     * @param capacity Maximum capacity of the zone
+     */
+    private JPanel createZonePanel(String zoneName, int capacity) {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.GRAY, 1),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+
+        // Label showing zone name and numbers
+        JLabel label = new JLabel(zoneName + ": " + capacity + "/" + capacity);
+        label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 16));
+        label.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Progress bar (without text inside)
+        JProgressBar progressBar = new JProgressBar(0, capacity);
+        progressBar.setValue(capacity);
+        progressBar.setStringPainted(false); // No text inside the bar
+        progressBar.setPreferredSize(new Dimension(200, 25));
+        progressBar.setMaximumSize(new Dimension(250, 25));
+        progressBar.setForeground(new Color(46, 204, 113)); // Green
+        progressBar.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Percentage label below the progress bar
+        JLabel percentLabel = new JLabel("100% Available");
+        percentLabel.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 13));
+        percentLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        percentLabel.setForeground(new Color(46, 139, 87)); // Dark green
+
+        // Assign to instance variables based on zone
+        if (zoneName.equals("Zone A")) {
+            zoneALabel = label;
+            zoneAProgress = progressBar;
+            zoneAPercent = percentLabel;
+        } else if (zoneName.equals("Zone B")) {
+            zoneBLabel = label;
+            zoneBProgress = progressBar;
+            zoneBPercent = percentLabel;
+        } else if (zoneName.equals("Zone C")) {
+            zoneCLabel = label;
+            zoneCProgress = progressBar;
+            zoneCPercent = percentLabel;
+        }
+
+        panel.add(label);
+        panel.add(Box.createVerticalStrut(8));
+        panel.add(progressBar);
+        panel.add(Box.createVerticalStrut(3));
+        panel.add(percentLabel);
 
         return panel;
     }
@@ -524,23 +585,56 @@ public class ParkingGUI extends JFrame {
     }
 
     /**
-     * Update availability display labels
+     * Update availability display labels and progress bars with color coding
      * WHY called from ParkingMonitor: Callback pattern for real-time updates
      * Must already be on EDT (called via invokeLater from ParkingMonitor)
      */
     private void updateAvailabilityDisplay(String zone, int available) {
         int capacity = zone.equals("A") ? 20 : zone.equals("B") ? 15 : 10;
+        int percentage = (int) ((available * 100.0) / capacity);
+
         String text = String.format("Zone %s: %d/%d", zone, available, capacity);
+        String progressText = String.format("%d%% Available", percentage);
+
+        // Color coding based on availability
+        Color barColor;
+        Color textColor;
+        if (percentage >= 50) {
+            barColor = new Color(46, 204, 113); // Green - plenty available
+            textColor = new Color(46, 139, 87); // Dark green
+        } else if (percentage >= 25) {
+            barColor = new Color(241, 196, 15); // Yellow - moderate
+            textColor = new Color(183, 149, 11); // Dark yellow
+        } else if (percentage > 0) {
+            barColor = new Color(231, 76, 60); // Red - low availability
+            textColor = new Color(192, 57, 43); // Dark red
+        } else {
+            barColor = new Color(189, 195, 199); // Gray - full
+            textColor = new Color(127, 140, 141); // Dark gray
+            progressText = "FULL";
+        }
 
         switch (zone) {
             case "A":
                 zoneALabel.setText(text);
+                zoneAProgress.setValue(available);
+                zoneAProgress.setForeground(barColor);
+                zoneAPercent.setText(progressText);
+                zoneAPercent.setForeground(textColor);
                 break;
             case "B":
                 zoneBLabel.setText(text);
+                zoneBProgress.setValue(available);
+                zoneBProgress.setForeground(barColor);
+                zoneBPercent.setText(progressText);
+                zoneBPercent.setForeground(textColor);
                 break;
             case "C":
                 zoneCLabel.setText(text);
+                zoneCProgress.setValue(available);
+                zoneCProgress.setForeground(barColor);
+                zoneCPercent.setText(progressText);
+                zoneCPercent.setForeground(textColor);
                 break;
         }
     }
