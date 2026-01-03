@@ -61,8 +61,7 @@ Desktop.ini
 *~
 
 # Runtime generated files
-# Uncomment the next line if you don't want to commit parking records
-# parking_records.txt
+parking_records.txt
 
 # Backup files
 *.bak
